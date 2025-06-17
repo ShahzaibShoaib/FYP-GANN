@@ -1,0 +1,63 @@
+import numpy as np
+from moviepy.editor import VideoFileClip
+import math
+
+def auto_gamma_correction(frame, target=0.5):
+    """
+    Apply automatic gamma correction to a frame.
+
+    Parameters:
+        frame (ndarray): The input image/frame (RGB, 0-255).
+        target (float): Desired normalized brightness (default 0.5).
+
+    Returns:
+        ndarray: Gamma-corrected frame.
+    """
+    # Convert frame to grayscale to compute the mean brightness.
+    # Using standard luminance conversion: Y = 0.299 R + 0.587 G + 0.114 B
+    gray = 0.299 * frame[:, :, 0] + 0.587 * frame[:, :, 1] + 0.114 * frame[:, :, 2]
+    mean_val = np.mean(gray)
+
+    # Avoid division by zero and ensure valid gamma calculation.
+    if mean_val <= 0:
+        gamma = 1.0
+    else:
+        # Compute gamma based on the mean brightness.
+        gamma = math.log(target) / math.log(mean_val / 255.0)
+
+    # Debug: print gamma for the frame (optional, comment out for production)
+    # print(f"Mean brightness: {mean_val:.2f}, Gamma: {gamma:.2f}")
+
+    # Normalize frame to range [0, 1], apply gamma correction, and scale back.
+    corrected = np.clip((frame / 255.0) ** gamma, 0, 1) * 255.0
+    return corrected.astype('uint8')
+
+def process_frame(frame):
+    """
+    Process a single video frame with automatic gamma correction.
+
+    Parameters:
+        frame (ndarray): Input frame in RGB.
+
+    Returns:
+        ndarray: Corrected frame.
+    """
+    return auto_gamma_correction(frame)
+
+def main(input_video_path, output_video_path):
+    # Load the video clip (MoviePy handles video and audio).
+    clip = VideoFileClip(input_video_path)
+
+    # Apply the gamma correction effect on each frame.
+    # Note: This may be slower for high-resolution videos.
+    processed_clip = clip.fl_image(process_frame)
+
+    # Write the processed video to a new file.
+    processed_clip.write_videofile(output_video_path, audio=True)
+
+if __name__ == "__main__":
+    # Replace these paths with your video file paths.
+    input_video = "results\Hand_out.mp4"
+    output_video = "output_video_gamma_corrected.mp4"
+
+    main(input_video, output_video)
